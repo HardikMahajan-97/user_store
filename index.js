@@ -1,13 +1,10 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import connectDB from "./db.js";
 import userRoutes from "./routes/user.routes.js";
-// import profileRoutes from "./routes/profile.routes.js";
-// import documentRoutes from "./routes/document.routes.js";
-
-console.log(userRoutes);
-// console.log(profileRoutes);
-// console.log(documentRoutes);
+import profileRoutes from "./routes/profile.routes.js";
+import documentRoutes from "./routes/document.routes.js";
 
 const app = express();
 app.use(express.json());
@@ -19,8 +16,8 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/auth", userRoutes);
-// app.use("/api/profile", profileRoutes);
-// app.use("/api/documents", documentRoutes);
+app.use("/api/profile", profileRoutes);
+app.use("/api/documents", documentRoutes);
 
 app.use((err, req, res, next) => {
   console.error("Global error:", err);

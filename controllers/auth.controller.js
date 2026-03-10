@@ -6,6 +6,18 @@ import crypto from "crypto";
 export const registerUser = async (req, res) => {
 
     const { name, email, password, phone, city, state, role } = req.body;
+    const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const validatePassword = (password) => password.length >= 8;
+
+    if (!name?.trim() || !email?.trim() || !password?.trim()) {
+        return res.status(400).json({ message: "All fields are required" });
+    }
+    if (!validateEmail(email)) {
+        return res.status(400).json({ message: "Invalid email format" });
+    }
+    if (!validatePassword(password)) {
+        return res.status(400).json({ message: "Password must be at least 8 characters" });
+    }
 
     try {
 
@@ -44,6 +56,9 @@ export const registerUser = async (req, res) => {
         });
 
     } catch (error) {
+        if (error.code === 11000) {
+            return res.status(400).json({ message: "Email or phone already exists" });
+        }
 
         res.status(500).json({
             message: error.message
