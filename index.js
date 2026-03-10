@@ -20,7 +20,7 @@ const corsOptions = {
   origin: process.env.ALLOWED_ORIGINS?.split(",") || [
     "http://localhost:3000",
     "http://localhost:5173",
-    "https://user-store-app.vercel.app/"
+    "https://user-store-app.vercel.app"
   ],
   credentials: true,
   optionsSuccessStatus: 200,
