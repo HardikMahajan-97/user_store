@@ -2,89 +2,44 @@ import mongoose from "mongoose";
 
 let dbUrl = process.env.MONGO_URI_PROD || process.env.MONGO_URI_DEV;
 
-// Validate environment variable exists
-if (!dbUrl) {
-  const errorMessage =
-    "❌ CRITICAL: No MongoDB URI found. Set MONGO_URI_PROD or MONGO_URI_DEV environment variable.";
-  console.error(errorMessage);
-  
-  // In production, don't exit immediately - allow graceful degradation
-  if (process.env.NODE_ENV === "production") {
-    console.warn("⚠ Running in degraded mode without database");
-  } else {
-    process.exit(1);
-  }
+// Cache connection across serverless invocations
+let cached = global.mongoose;
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
 }
 
-// Configure mongoose options
 const mongooseOptions = {
-  // Connection timeout: 10 seconds
   serverSelectionTimeoutMS: 10000,
-  
-  // Socket timeout: 30 seconds
   socketTimeoutMS: 30000,
-  
-  // Connection pool size
-  maxPoolSize: 10,
-  minPoolSize: 2,
-  
-  // Retry settings
-  retryWrites: true,
-  retryReads: true,
-  
-  // Connection string handling
   connectTimeoutMS: 10000,
+  maxPoolSize: 10,
+  minPoolSize: 0,      // ✅ 0 for serverless - don't force open connections
+  bufferCommands: false, // ✅ fail fast if not connected
 };
 
 const connectDB = async () => {
-  // Skip if already connected
-  if (mongoose.connection.readyState === 1) {
-    console.log("✓ MongoDB already connected");
-    return;
+  // Return cached connection if available
+  if (cached.conn) {
+    return cached.conn;
+  }
+
+  // Reuse in-flight connection promise
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(dbUrl, mongooseOptions)
+      .then((mongoose) => {
+        console.log("✓ MongoDB connected successfully");
+        return mongoose;
+      });
   }
 
   try {
-    console.log("⏳ Connecting to MongoDB...");
-    
-    await mongoose.connect(dbUrl, mongooseOptions);
-    
-    console.log("✓ MongoDB connected successfully");
-    console.log(`  Connection state: ${mongoose.connection.readyState}`);
-    
-    return true;
+    cached.conn = await cached.promise;
   } catch (error) {
-    console.error("✗ MongoDB connection error:");
-    console.error(`  Message: ${error.message}`);
-    console.error(`  Code: ${error.code}`);
-    
-    // Provide helpful debugging info
-    if (error.message.includes("ENOTFOUND")) {
-      console.error("  → Check your MongoDB URI hostname");
-    } else if (error.message.includes("timeout")) {
-      console.error("  → MongoDB connection timeout - check IP whitelist in Atlas");
-    } else if (error.message.includes("authentication failed")) {
-      console.error("  → Invalid MongoDB credentials");
-    }
-    
+    cached.promise = null; // Reset so next request retries
     throw error;
   }
+
+  return cached.conn;
 };
-
-// Handle connection events
-mongoose.connection.on("connected", () => {
-  console.log("✓ Mongoose connected to MongoDB");
-});
-
-mongoose.connection.on("disconnected", () => {
-  console.log("⚠ Mongoose disconnected from MongoDB");
-});
-
-mongoose.connection.on("error", (err) => {
-  console.error("✗ MongoDB connection error event:", err.message);
-});
-
-mongoose.connection.on("reconnected", () => {
-  console.log("✓ Mongoose reconnected to MongoDB");
-});
 
 export default connectDB;
