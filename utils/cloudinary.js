@@ -12,7 +12,9 @@ const storage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: "placement_documents",
-    resource_type: "auto",
+    resource_type: "raw",
+    use_filename: true,
+    unique_filename: true,
   },
 });
 
