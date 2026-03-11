@@ -63,10 +63,7 @@ app.get("/api/status", (req, res) => {
 // API Routes (protected by DB connection check middleware)
 const dbConnectMiddleware = async (req, res, next) => {
   try {
-    if (mongoose.connection.readyState === 1) {
-      return next(); // Already connected
-    }
-    await connectDB();
+    await connectDB(); // connectDB already handles caching
     next();
   } catch (error) {
     return res.status(503).json({ error: "Database unavailable" });
@@ -104,40 +101,11 @@ app.use((req, res) => {
 });
 
 // Start server with timeout handling
-const startServer = async () => {
-  try {
-    console.log("Starting server...");
-    
-    // Set connection timeout
-    const connectionPromise = connectDB();
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(
-        () => reject(new Error("Database connection timeout")),
-        15000 // 15 second timeout
-      )
-    );
-
-    await Promise.race([connectionPromise, timeoutPromise]);
-    dbConnected = true;
-    console.log("✓ Database connected successfully");
-  } catch (error) {
-    console.error("✗ Database connection failed:", error.message);
-    // Don't exit - allow server to start with degraded functionality
-    console.warn("⚠ Server starting without database connection");
-    dbConnected = false;
-  }
-
-  // For local development
-  if (process.env.NODE_ENV !== "production") {
-    const port = process.env.PORT || 8080;
-    app.listen(port, () => {
-      console.log(`✓ Server listening on port ${port}`);
-    });
-  }
-};
-
-// Start server
-startServer();
+// ✅ Only start listening locally
+if (process.env.NODE_ENV !== "production") {
+  const port = process.env.PORT || 8080;
+  app.listen(port, () => console.log(`✓ Server on port ${port}`));
+}
 
 // For Vercel serverless deployment
 export default app;
