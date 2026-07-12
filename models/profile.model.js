@@ -19,6 +19,10 @@ const profileSchema = new mongoose.Schema(
     branch: { type: String },
     cgpa: { type: String },
     graduationYear: { type: String },
+    tenthPercentage: { type: Number, default: 0 },
+    twelthPercentage: { type: Number, default: 0 },
+    compositeScore: { type: Number, default: 0 },
+    cocubesScore: { type: Number, default: 0 },
 
     // Coding Platforms
     codingProfiles: [
