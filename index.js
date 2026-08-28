@@ -7,6 +7,11 @@ import connectDB from "./db.js";
 import userRoutes from "./routes/user.routes.js";
 import profileRoutes from "./routes/profile.routes.js";
 import documentRoutes from "./routes/document.routes.js";
+import companyRoutes from "./routes/company.routes.js";
+import jobRoutes from "./routes/job.routes.js";
+import applicationRoutes from "./routes/application.routes.js";
+import eligibilityRoutes from "./routes/eligibility.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
 
 // Initialize Express app
 const app = express();
@@ -44,7 +49,7 @@ app.get("/", (req, res) => {
   res.status(200).json({
     message: "Placement Management API is running",
     version: "1.0.0",
-    health: "ok",
+    health: "Ok",
   });
 });
 
@@ -73,6 +78,11 @@ const dbConnectMiddleware = async (req, res, next) => {
 app.use("/api/auth", dbConnectMiddleware, userRoutes);
 app.use("/api/profile", dbConnectMiddleware, profileRoutes);
 app.use("/api/documents", dbConnectMiddleware, documentRoutes);
+app.use("/api/companies", dbConnectMiddleware, companyRoutes);
+app.use("/api/jobs", dbConnectMiddleware, jobRoutes);
+app.use("/api/applications", dbConnectMiddleware, applicationRoutes);
+app.use("/api/eligibility", dbConnectMiddleware, eligibilityRoutes);
+app.use("/api/notifications", dbConnectMiddleware, notificationRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

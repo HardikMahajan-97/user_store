@@ -1,12 +1,33 @@
 import Profile from "../models/profile.model.js";
 import User from "../models/user.model.js";
+import { calculateCompositeScore } from "../utils/compositeScore.js";
+
+const ensureCompositeScore = async (profile) => {
+  if (!profile) {
+    return profile;
+  }
+
+  const hasInputScores =
+    profile.tenthPercentage !== undefined ||
+    profile.twelthPercentage !== undefined ||
+    profile.cgpa !== undefined ||
+    profile.cocubesScore !== undefined;
+
+  if (profile.compositeScore === undefined || profile.compositeScore === null || (profile.compositeScore === 0 && hasInputScores)) {
+    profile.compositeScore = calculateCompositeScore(profile);
+    await profile.save();
+  }
+
+  return profile;
+};
 
 // Student: update (or create) their own profile
 export const updateProfile = async (req, res) => {
   try {
+    const { compositeScore, ...profileBody } = req.body;
     const profileData = {
       student: req.user._id,
-      ...req.body,
+      ...profileBody,
     };
 
     const profile = await Profile.findOneAndUpdate(
@@ -14,6 +35,9 @@ export const updateProfile = async (req, res) => {
       profileData,
       { new: true, upsert: true, runValidators: true }
     );
+
+    profile.compositeScore = calculateCompositeScore(profile);
+    await profile.save();
 
     res.status(200).json({ message: "Profile updated successfully", profile });
   } catch (error) {
@@ -33,7 +57,9 @@ export const getMyProfile = async (req, res) => {
       return res.status(404).json({ message: "Profile not found. Please update your profile first." });
     }
 
-    res.status(200).json(profile);
+    const hydratedProfile = await ensureCompositeScore(profile);
+
+    res.status(200).json(hydratedProfile);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -59,7 +85,9 @@ export const getProfileByEmail = async (req, res) => {
       return res.status(404).json({ message: "Profile not found for this student" });
     }
 
-    res.status(200).json(profile);
+    const hydratedProfile = await ensureCompositeScore(profile);
+
+    res.status(200).json(hydratedProfile);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -82,6 +110,11 @@ export const getProfilesByEmails = async (req, res) => {
       "student",
       "name email phone city state"
     );
+
+    for (const profile of profiles) {
+      // Backfill composite scores for older profiles before sending them back.
+      await ensureCompositeScore(profile);
+    }
 
     res.status(200).json({ count: profiles.length, profiles });
   } catch (error) {
